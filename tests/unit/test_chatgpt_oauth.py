@@ -62,12 +62,15 @@ async def test_discovery_and_unauthenticated_mcp(provider):
 
 
 @pytest.mark.asyncio
-async def test_registration_redirect_and_pkce(provider):
+@pytest.mark.parametrize("callback", [
+    "https://chatgpt.com/connector/oauth/test-callback",
+    "http://127.0.0.1:51671/callback/test-callback",
+])
+async def test_registration_redirect_and_pkce(provider, callback):
     app = FastMCP("oauth-test", auth=provider).http_app()
     async with httpx.AsyncClient(
         transport=httpx.ASGITransport(app), base_url="https://ads.example.com"
     ) as c:
-        callback = "https://chatgpt.com/connector/oauth/test-callback"
         client = await c.post(
             "/register",
             json={
@@ -103,6 +106,16 @@ async def test_registration_redirect_and_pkce(provider):
             params={**params, "redirect_uri": "https://evil.example/callback"},
         )
         assert bad.status_code == 400
+        for rejected in [
+            "http://127.0.0.1:51671@evil.example/callback/test",
+            "http://127.0.0.1.evil.example:51671/callback/test",
+            "http://192.168.1.1:51671/callback/test",
+            "http://127.0.0.1:51671/unrelated/test",
+        ]:
+            bad = await c.get(
+                "/authorize", params={**params, "redirect_uri": rejected}
+            )
+            assert bad.status_code == 400
         missing_pkce = {
             k: v for k, v in params.items() if not k.startswith("code_challenge")
         }

@@ -95,6 +95,9 @@ def create_chatgpt_oauth(settings, provider) -> OAuthProxy | None:
         allowed_client_redirect_uris=[
             "https://chatgpt.com/connector/oauth/*",
             "https://chat.openai.com/aip/*",
+            # Work Mode uses a loopback listener with a per-login port/path.
+            # FastMCP validates URL components and rejects userinfo injection.
+            "http://127.0.0.1:*/callback/*",
         ],
         # Amazon's confidential web flow uses client_secret_post; PKCE remains
         # mandatory on the downstream ChatGPT-to-MCP authorization-code flow.
