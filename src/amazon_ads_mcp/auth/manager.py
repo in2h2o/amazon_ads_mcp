@@ -483,6 +483,10 @@ class AuthManager:
         :rtype: AuthCredentials
         :raises RuntimeError: If no auth provider is configured or no active identity
         """
+        from ..server.chatgpt_oauth import oauth_enabled, request_amazon_credentials
+
+        if oauth_enabled():
+            return request_amazon_credentials(self.provider)
         if not self.provider:
             raise RuntimeError("No auth provider configured")
 
@@ -790,6 +794,12 @@ class AuthManager:
         :return: None
         :rtype: None
         """
+        from ..server.chatgpt_oauth import oauth_enabled, request_amazon_credentials
+
+        if oauth_enabled():
+            identity_id = request_amazon_credentials(self.provider).identity_id
+            _ctx_set_profiles({**_ctx_get_profiles(), identity_id: profile_id})
+            return
         active_identity = _ctx_get_identity()
         if not active_identity:
             # Store as default
@@ -811,6 +821,11 @@ class AuthManager:
         :return: Active profile ID or None if none set
         :rtype: Optional[str]
         """
+        from ..server.chatgpt_oauth import oauth_enabled, request_amazon_credentials
+
+        if oauth_enabled():
+            identity_id = request_amazon_credentials(self.provider).identity_id
+            return _ctx_get_profiles().get(identity_id)
         active_identity = _ctx_get_identity()
         if not active_identity:
             return self._default_profile_id
@@ -827,6 +842,12 @@ class AuthManager:
         :return: None
         :rtype: None
         """
+        from ..server.chatgpt_oauth import oauth_enabled, request_amazon_credentials
+
+        if oauth_enabled():
+            identity_id = request_amazon_credentials(self.provider).identity_id
+            _ctx_set_profiles({k: v for k, v in _ctx_get_profiles().items() if k != identity_id})
+            return
         active_identity = _ctx_get_identity()
         if active_identity:
             identity_id = active_identity.id
@@ -899,6 +920,10 @@ class AuthManager:
         :return: Active identity ID or None
         :rtype: Optional[str]
         """
+        from ..server.chatgpt_oauth import oauth_enabled, request_amazon_credentials
+
+        if oauth_enabled():
+            return request_amazon_credentials(self.provider).identity_id
         active_identity = _ctx_get_identity()
         if active_identity:
             return active_identity.id

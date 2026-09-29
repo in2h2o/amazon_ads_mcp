@@ -125,6 +125,11 @@ class DirectAmazonAdsProvider(BaseAmazonAdsProvider, BaseIdentityProvider):
         :rtype: Token
         :raises ValueError: If no refresh token is available
         """
+        from ...server.chatgpt_oauth import oauth_enabled, request_amazon_credentials
+
+        if oauth_enabled():
+            credentials = request_amazon_credentials(self)
+            return Token(value=credentials.access_token, expires_at=credentials.expires_at)
         # Try to get from AuthManager's token store first
         auth_manager = None
         try:

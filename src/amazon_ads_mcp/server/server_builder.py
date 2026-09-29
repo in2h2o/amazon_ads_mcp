@@ -31,6 +31,7 @@ from ..utils.media import MediaTypeRegistry
 from ..utils.region_config import RegionConfig
 from .openapi_utils import slim_openapi_for_tools
 from .sidecar_loader import _json_load as json_load
+from .chatgpt_oauth import create_chatgpt_oauth, oauth_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -189,7 +190,8 @@ class ServerBuilder:
             "Amazon Ads MCP Server",
             version=__version__,
             lifespan=self.lifespan,
-            tasks=settings.enable_tasks,
+            tasks=False if oauth_enabled() else settings.enable_tasks,
+            auth=create_chatgpt_oauth(settings, self.auth_manager.provider),
         )
 
         # Setup server-side sampling handler if enabled
@@ -362,7 +364,7 @@ class ServerBuilder:
             )
 
         # Add OAuth middleware if credentials are available
-        if create_oauth_middleware and all(
+        if not oauth_enabled() and create_oauth_middleware and all(
             [
                 settings.oauth_client_id,
                 settings.oauth_client_secret,
@@ -927,6 +929,8 @@ class ServerBuilder:
 
     async def _setup_oauth_callback(self):
         """Setup OAuth callback route for HTTP transport."""
+        if oauth_enabled():
+            return  # FastMCP's OAuth proxy owns this callback and validates state.
         # Only register OAuth callback route for HTTP transport
         # Check if server has custom_route method (HTTP transport)
         if hasattr(self.server, "custom_route"):
@@ -1146,6 +1150,8 @@ class ServerBuilder:
         Registers custom routes for downloading files via HTTP.
         Only effective with HTTP transport (not stdio).
         """
+        if oauth_enabled():
+            return  # Legacy disk downloads are not scoped to an OAuth grant.
         from .file_routes import register_file_routes
 
         register_file_routes(self.server)

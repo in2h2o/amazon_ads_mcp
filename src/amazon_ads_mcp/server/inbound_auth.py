@@ -184,6 +184,13 @@ def authorize_inbound_http(
     configured_host: str | None,
     allow_oauth_callback: bool = True,
 ) -> InboundAuthResult:
+    from .chatgpt_oauth import oauth_enabled, get_access_token
+
+    if oauth_enabled():
+        token = get_access_token()
+        if token and token.claims.get("amazon_ads_verified"):
+            return InboundAuthResult(True, "amazon_oauth")
+        return InboundAuthResult(False, "oauth_required")
     if request is None:
         return InboundAuthResult(True, "non_http_transport")
     if request.url.path in HEALTH_PATHS:
@@ -261,6 +268,15 @@ class InboundHTTPAuthMiddleware(Middleware):
     ) -> Any:
         request, result = self._authorize_tool_call(context)
         provider = getattr(self.auth_manager, "provider", None)
+        if result.reason == "amazon_oauth":
+            from .chatgpt_oauth import request_amazon_credentials
+
+            fingerprint = request_amazon_credentials(provider).identity_id
+            tenant_token = bind_request_tenant_fingerprint(fingerprint)
+            try:
+                return await call_next(context)
+            finally:
+                reset_request_tenant_token(tenant_token)
         bearer = extract_bearer_token(request) if request is not None else None
         if result.reason != "kuudo_bearer" or not bearer:
             return await call_next(context)

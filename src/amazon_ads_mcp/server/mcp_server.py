@@ -320,13 +320,14 @@ def main() -> None:
             logger.info("Starting %s server on %s:%d", transport, args.host, args.port)
             from ..auth.manager import get_auth_manager
             from .inbound_auth import create_inbound_http_auth_asgi_middleware
+            from .chatgpt_oauth import oauth_enabled
 
             # Use streamable-http transport which handles SSE properly
             mcp.run(
                 transport=transport,
                 host=args.host,
                 port=args.port,
-                middleware=[
+                middleware=[] if oauth_enabled() else [
                     create_inbound_http_auth_asgi_middleware(
                         get_auth_manager(), args.host
                     )

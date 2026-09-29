@@ -1632,7 +1632,10 @@ async def register_all_builtin_tools(
     await register_profile_listing_tools(server)
     await register_region_tools(server)
     # Routing tools removed - override functionality was redundant
-    await register_download_tools(server)
+    from .chatgpt_oauth import oauth_enabled
+
+    if not oauth_enabled():
+        await register_download_tools(server)
     await register_report_catalog_tools(server)
     await register_sampling_tools(server)
     # Cache & diagnostic tools removed - not core operations
@@ -1642,7 +1645,7 @@ async def register_all_builtin_tools(
     if auth_mgr and auth_mgr.provider:
         # Check provider_type property (not auth_method attribute)
         if hasattr(auth_mgr.provider, "provider_type"):
-            if auth_mgr.provider.provider_type == "direct":
+            if auth_mgr.provider.provider_type == "direct" and not oauth_enabled():
                 # Direct OAuth authentication tools
                 await register_oauth_tools_builtin(server)
                 logger.info("Registered OAuth authentication tools")
