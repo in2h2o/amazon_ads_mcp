@@ -53,7 +53,7 @@ COPY --from=uv-bin /uv /uvx /bin/
 COPY pyproject.toml uv.lock README.md ./
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv venv /opt/venv && \
-    uv sync --no-dev --frozen --extra code-mode --no-install-project --no-editable
+    uv sync --no-dev --extra code-mode --no-install-project --no-editable
 
 # Now bring in the project itself and install it on top of the cached deps.
 # pyproject.toml uses build_package.py as an in-tree PEP 517 backend.
